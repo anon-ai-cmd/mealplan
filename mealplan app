@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Meal Planner</title>
+  <style>
+    /* --- Base Styles & Variables --- */
+    :root {
+      --primary: #2563eb; /* indigo-600 */
+      --primary-light: #3b82f6; /* indigo-500 */
+      --bg: #f3f4f6; /* gray-100 */
+      --card: #ffffff; /* white */
+      --shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+      --radius: 0.75rem;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+        sans-serif;
+      background: var(--bg);
+      color: #1f2937; /* gray-800 */
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+    }
+
+    /* --- Header & Controls --- */
+    header {
+      padding: 2rem 1rem;
+      text-align: center;
+      background-color: var(--card);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border-bottom: 1px solid #e5e7eb; /* gray-200 */
+    }
+    h1 {
+      margin-bottom: 0.5rem;
+      font-size: clamp(1.8rem, 4vw, 2.4rem); /* Responsive font size */
+      color: var(--primary);
+      font-weight: 700;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center; /* Align items vertically */
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    select,
+    button {
+      font-size: 1rem;
+      padding: 0.6rem 1rem;
+      border: 1px solid #d1d5db; /* gray-300 */
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      height: 44px; /* Consistent height */
+    }
+    select {
+      background: #fff;
+      cursor: pointer;
+    }
+    button {
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+      transition: 0.2s background-color, 0.2s opacity;
+      border-color: var(--primary); /* Match border */
+    }
+    button:hover {
+      background: var(--primary-light);
+      border-color: var(--primary-light);
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: #9ca3af; /* gray-400 */
+      border-color: #9ca3af;
+    }
+
+    /* --- Main Plan Area --- */
+    main {
+      flex: 1; /* Takes up remaining vertical space */
+      display: grid;
+      gap: 1.5rem; /* Increased gap */
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); /* Responsive columns */
+      padding: 1.5rem; /* Increased padding */
+      max-width: 1400px; /* Wider max width */
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* --- Day Card --- */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden; /* Contain children, helps with border-radius */
+      border: 1px solid #e5e7eb; /* Subtle border */
+    }
+    .card h3 { /* Day Title */
+      background: var(--primary);
+      color: #fff;
+      padding: 0.75rem 1rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    /* --- Meals Grid within Card --- */
+    .meals {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr); /* 3 meals across */
+      gap: 0.75rem;
+      padding: 1rem;
+    }
+
+    /* --- Individual Meal Tile --- */
+    .meal {
+      position: relative; /* For absolute positioning of children */
+      background: #f9fafb; /* gray-50 */
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      overflow: hidden; /* Keep image corners rounded */
+      border: 1px solid #e5e7eb; /* Subtle border */
+    }
+    .meal img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover; /* Crop image nicely */
+      display: block; /* Remove extra space below image */
+    }
+    .meal span { /* Meal Type Label (Breakfast, etc.) */
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #fff;
+      background-color: rgba(0, 0, 0, 0.6); /* Darker overlay */
+      padding: 0.15rem 0.5rem;
+      border-radius: 0.25rem;
+      position: absolute;
+      top: 8px; /* Positioned slightly from edge */
+      left: 8px;
+      z-index: 1;
+    }
+    .meal a { /* Meal Name Link */
+      padding: 0.75rem 0.5rem; /* More padding */
+      margin-top: 0.25rem;
+      font-size: 0.9rem; /* Slightly larger */
+      font-weight: 600;
+      color: var(--primary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      flex-grow: 1; /* Take remaining vertical space */
+      min-height: 45px; /* Ensure consistent space */
+      transition: color 0.2s;
+    }
+    .meal a:hover {
+      color: var(--primary-light);
+      text-decoration: underline;
+    }
+    .swap { /* Swap Button */
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(255, 255, 255, 0.9); /* Slightly transparent */
+      border: none;
+      width: 30px; /* Slightly larger */
+      height: 30px;
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1.1rem; /* Make symbol larger */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+      transition: 0.2s background-color, 0.2s color, 0.2s transform;
+      color: #374151; /* gray-700 */
+    }
+    .swap:hover {
+      background-color: var(--primary-light);
+      color: #fff;
+      transform: rotate(90deg); /* Rotate on hover */
+    }
+    .swap:disabled {
+      background: #e5e7eb; /* gray-200 */
+      color: #9ca3af; /* gray-400 */
+      cursor: not-allowed;
+      transform: none; /* No rotation when disabled */
+      box-shadow: none;
+    }
+    .swap[innerHTML="..."] { /* Loading state */
+        font-size: 0.8rem; /* Smaller dots */
+        transform: none;
+    }
+     .swap[innerHTML="⚠️"] { /* Error state */
+        background-color: #fef2f2; /* red-50 */
+        color: #ef4444; /* red-500 */
+        transform: none;
+     }
+
+    /* --- Daily Macros Footer --- */
+    .macros {
+      padding: 0.75rem 1rem;
+      border-top: 1px solid #e5e7eb; /* gray-200 */
+      font-size: 0.85rem;
+      color: #4b5563; /* gray-600 */
+      text-align: center;
+      background-color: #f9fafb; /* gray-50 */
+    }
+
+    /* --- Grocery List Section --- */
+    #grocery {
+      max-width: 800px;
+      margin: 2rem auto;
+      background: var(--card);
+      padding: 1.5rem 2rem; /* More padding */
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid #e5e7eb; /* Subtle border */
+    }
+    #grocery h2 {
+      margin-bottom: 1.5rem; /* More space */
+      color: var(--primary);
+      text-align: center;
+      font-weight: 600;
+    }
+    #grocery ul { /* Overall list container */
+      columns: 2 200px; /* Responsive columns */
+      gap: 2rem; /* More gap */
+      list-style: none;
+      padding-left: 0;
+    }
+    #grocery ul ul { /* Nested list (items under group) */
+      margin-left: 0.5rem;
+      padding-left: 1rem; /* Indent with padding */
+      margin-top: 0.5rem; /* Space below group title */
+      list-style: disc; /* Use standard bullets */
+    }
+    #grocery > ul > li { /* Group headers (Produce, Dairy, etc.) */
+      break-inside: avoid; /* Prevent groups breaking across columns */
+      margin-bottom: 1.5rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid #f3f4f6; /* Lighter separator */
+    }
+    #grocery > ul > li:first-child {
+      border-top: none;
+      padding-top: 0;
+    }
+    #grocery li li { /* Individual grocery items */
+      margin-bottom: 0.4rem;
+      font-size: 0.9rem;
+      color: #374151; /* gray-700 */
+    }
+    #grocery strong { /* Group Titles */
+      font-size: 1.05rem; /* Slightly larger */
+      font-weight: 600;
+      color: #1f2937; /* gray-800 */
+    }
+
+    /* --- Utility for Loading/Error States --- */
+    .status-message {
+      text-align: center;
+      padding: 2rem;
+      font-size: 1.2rem;
+      width: 100%;
+      color: #4b5563; /* gray-600 */
+      grid-column: 1 / -1; /* Span all columns if in main grid */
+    }
+    .status-message.error {
+      color: #991b1b; /* red-800 */
+      background-color: #fee2e2; /* red-100 */
+      border: 1px solid #fecaca; /* red-200 */
+      border-radius: var(--radius);
+      margin: 1rem auto;
+      max-width: 800px;
+      padding: 1rem 1.5rem;
+    }
+
+    /* --- Print Styles --- */
+    @media print {
+      header,
+      .controls button#print,
+      .swap { /* Hide header, print button, swap buttons */
+        display: none !important;
+      }
+      body {
+        background: #fff;
+        color: #000;
+        font-size: 10pt; /* Smaller base font for print */
+      }
+      main {
+        grid-template-columns: repeat(2, 1fr); /* 2 columns for print */
+        gap: 0.5rem;
+        padding: 0.5rem;
+        max-width: 100%;
+      }
+      .card {
+        box-shadow: none;
+        border: 1px solid #ccc;
+        border-radius: 0;
+        page-break-inside: avoid; /* Try to keep cards intact */
+      }
+      .meals {
+        grid-template-columns: 1fr; /* Stack meals vertically */
+        gap: 0.25rem;
+        padding: 0.5rem;
+      }
+      .meal {
+         border-radius: 0;
+         box-shadow: none;
+         border: 1px solid #eee;
+         margin-bottom: 0.25rem;
+      }
+      .meal img {
+        height: 80px; /* Smaller images */
+      }
+      .meal span { /* Hide meal type label */
+        display: none;
+      }
+      .meal a {
+        font-size: 0.8rem;
+        padding: 0.25rem;
+        min-height: 30px;
+      }
+      .macros {
+        font-size: 0.8rem;
+        padding: 0.5rem;
+        background-color: #fff;
+      }
+      #grocery {
+        box-shadow: none;
+        max-width: 100%;
+        border: none;
+        margin: 1rem 0;
+        padding: 0;
+      }
+      #grocery ul {
+        columns: 1; /* Single column for grocery list */
+      }
+       #grocery h2 { font-size: 1.2rem; margin-bottom: 0.5rem;}
+       #grocery strong { font-size: 0.9rem;}
+       #grocery li li { font-size: 0.85rem; margin-bottom: 0.2rem;}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Smart Meal Planner</h1>
+    <div class="controls">
+      <select id="diet">
+        <option value="none">Diet: Any</option>
+        <option value="vegetarian">Vegetarian</option>
+        <option value="pescatarian">Pescatarian</option>
+        <option value="keto">Keto / Low‑Carb</option>
+      </select>
+      <button id="generate">Generate Plan</button>
+      <button id="print">Print / PDF</button>
+    </div>
+  </header>
+
+  <main id="plan"></main>
+
+  <section id="grocery" hidden>
+    <h2>Grouped Grocery List</h2>
+    <ul id="grocery-list"></ul>
+  </section>
+
+<script>
+/* ===== CONFIGURATION ===== */
+// Optional: Replace with your CalorieNinjas API key for nutrition data
+const API_KEY = "YOUR_CALORIE_NINJAS_API_KEY_HERE";
+// Determines if the CalorieNinjas API should be used (checks if key is present and not the placeholder)
+const USE_REAL = API_KEY && API_KEY !== "YOUR_CALORIE_NINJAS_API_KEY_HERE";
+console.log(`Using ${USE_REAL ? 'real' : 'mock'} nutrition data.`);
+
+/* ===== DOM ELEMENT REFERENCES ===== */
+const dietSel = document.getElementById('diet');
+const genBtn = document.getElementById('generate');
+const printBtn = document.getElementById('print');
+const plan = document.getElementById('plan'); // Main container for day cards
+const grocery = document.getElementById('grocery'); // Grocery list section
+const groceryList = document.getElementById('grocery-list'); // UL element for groceries
+
+// Setup print button functionality
+printBtn.onclick = () => window.print();
+
+/* ===== APPLICATION STATE ===== */
+let breakfastPool = null; // Cache for breakfast meal IDs/stubs
+let planData = []; // Array to hold data for each day { meals: {breakfast, lunch, dinner}, macros: {cal, pro, car, fat} }
+const used = new Set(); // Tracks used meal IDs during a single generation to promote variety
+// Load nutrition cache from localStorage or initialize empty object
+const nutCache = JSON.parse(localStorage.getItem('nutCache') || '{}');
+
+/* ===== HELPER FUNCTIONS ===== */
+
+/** Checks if a meal category is 'Dessert'. */
+const isDessert = m => m && /dessert/i.test(m.strCategory || '');
+
+/** Returns a random element from an array. */
+const rnd = arr => arr[Math.floor(Math.random() * arr.length)];
+
+/** Generates mock macro data (used if USE_REAL is false or API fails). */
+const mockMacros = () => ({
+    cal: Math.round(350 + Math.random() * 150),
+    pro: Math.round(15 + Math.random() * 20),
+    car: Math.round(15 + Math.random() * 35),
+    fat: Math.round(12 + Math.random() * 15)
+});
+
+/** Aggregates two macro objects, ensuring properties exist. */
+const agg = (a, b) => ({
+    cal: (a?.cal || 0) + (b?.cal || 0),
+    pro: (a?.pro || 0) + (b?.pro || 0),
+    car: (a?.car || 0) + (b?.car || 0),
+    fat: (a?.fat || 0) + (b?.fat || 0)
+});
+
+/** Definitions for grouping grocery items based on keywords. */
+const groupDefs = {
+    Produce: [/tomato|lettuce|apple|pepper|onion|broccoli|spinach|carrot|potato|lime|lemon|avocado|garlic|berry|berries|banana|orange|grape|celery|cucumber|mushroom|corn|cabbage|kale|herb|basil|parsley|cilantro|mint|dill|rosemary|thyme|zucchini|squash|asparagus|ginger|scallion|leek/i],
+    Dairy: [/milk|cheese|yogurt|cream|butter|sour cream|cottage cheese|egg/i], // Moved egg here
+    Protein: [/chicken|beef|pork|salmon|shrimp|turkey|lamb|tofu|tuna|cod|haddock|bacon|sausage|lentil|bean|chickpea|fish|steak|ham|mince/i],
+    Pantry: [/salt|pepper|oil|flour|sugar|vinegar|rice|pasta|spice|soy sauce|stock|broth|bread|nut|seed|honey|maple syrup|mustard|ketchup|mayonnaise|cereal|oat|jam|jelly|can|jar|condiment|baking soda|baking powder|extract|bouillon|worcestershire/i]
+};
+
+/** Assigns an ingredient string to a grocery group. */
+const groupIng = i => {
+    const cleanIng = i.toLowerCase().split(/,|\(/)[0].trim(); // Use part before first comma or parenthesis
+    for (const [g, arr] of Object.entries(groupDefs)) {
+        if (arr.some(re => re.test(cleanIng))) return g;
+    }
+    return 'Other'; // Default group if no match
+};
+
+/** Generic fetch function with basic error handling. */
+const q = async (url) => {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status} for ${url}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Fetch error:", error);
+        // Return a structure that won't break downstream processing expecting .meals
+        return { meals: null };
+    }
+};
+
+/** Fetches full meal details by ID from TheMealDB. */
+const lookup = async (id) => {
+    if (!id) return null;
+    const data = await q(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`);
+    return data.meals ? data.meals[0] : null; // Return the first meal or null
+};
+
+/** Fetches a random meal (full details) from TheMealDB. */
+const randMeal = async () => {
+    const data = await q('https://www.themealdb.com/api/json/v1/1/random.php');
+    return data.meals ? data.meals[0] : null;
+};
+
+/** Fetches and caches a pool of potential breakfast meals. */
+async function getBreakfastPool() {
+    if (breakfastPool) return breakfastPool; // Return cached pool if available
+    console.log("Fetching breakfast pool...");
+    try {
+        // Fetch meals explicitly categorized as Breakfast and search results tagged 'breakfast'
+        const catPromise = q('https://www.themealdb.com/api/json/v1/1/filter.php?c=Breakfast');
+        const sPromise = q('https://www.themealdb.com/api/json/v1/1/search.php?s='); // Search all to find tags
+        const [cat, s] = await Promise.all([catPromise, sPromise]);
+
+        const pool = new Map(); // Use Map to automatically handle duplicate meal IDs
+        (cat.meals || []).forEach(m => pool.set(m.idMeal, m)); // Add categorized meals
+        (s.meals || [])
+            .filter(m => m && m.strTags && /breakfast/i.test(m.strTags)) // Filter search results for breakfast tag
+            .forEach(m => pool.set(m.idMeal, m)); // Add tagged meals (duplicates ignored)
+
+        breakfastPool = Array.from(pool.values()); // Convert Map values back to array
+        console.log(`Breakfast pool fetched: ${breakfastPool.length} meals`);
+        if (breakfastPool.length === 0) console.warn("Breakfast pool is empty!");
+        return breakfastPool;
+    } catch (error) {
+        console.error("Failed to build breakfast pool:", error);
+        return []; // Return empty array on error to prevent crashes
+    }
+}
+
+/** Selects a random breakfast meal stub from the pool and fetches its full details. */
+async function mealBreakfast() {
+    const pool = await getBreakfastPool();
+    if (!pool || pool.length === 0) {
+        console.warn("Breakfast pool empty, falling back to random meal.");
+        return randMeal(); // Fallback if pool is empty
+    }
+    const randomBreakfastStub = rnd(pool);
+    return lookup(randomBreakfastStub.idMeal); // Fetch full details using the ID
+}
+
+/** Fetches a meal based on the selected diet preference, attempting multiple times. */
+async function mealDiet(diet) {
+    const MAX_ATTEMPTS = 25;
+    for (let i = 0; i < MAX_ATTEMPTS; i++) {
+        let mealStub;
+        let sourceAPI = ''; // For logging
+        let meal = null;
+
+        try {
+            // Determine API endpoint based on diet
+            if (diet === 'vegetarian') {
+                sourceAPI = 'filter.php?c=Vegetarian';
+                const data = await q(`https://www.themealdb.com/api/json/v1/1/${sourceAPI}`);
+                if (!data.meals) continue; // Try again if no meals returned
+                mealStub = rnd(data.meals);
+            } else if (diet === 'pescatarian') {
+                sourceAPI = 'filter.php?c=Seafood';
+                const data = await q(`https://www.themealdb.com/api/json/v1/1/${sourceAPI}`);
+                 if (!data.meals) continue;
+                mealStub = rnd(data.meals);
+            } else { // 'none' or 'keto' (keto filtering happens later)
+                sourceAPI = 'random.php';
+                meal = await randMeal(); // Fetch full random meal directly
+                 if (!meal) continue; // Try again if random fetch failed
+            }
+
+            // If fetched via filter.php, we need full details
+            if (mealStub) {
+                meal = await lookup(mealStub.idMeal);
+                 if (!meal) continue; // Try again if lookup failed
+            }
+
+            // Post-fetch filtering
+            if (isDessert(meal)) continue; // Skip desserts
+            // Keto check (basic tag check, might miss untagged keto meals)
+            if (diet === 'keto' && !((meal.strTags || '').match(/low\s*carb|keto/i))) {
+                // console.log(`Skipping non-keto tagged: ${meal.strMeal}`);
+                continue;
+            }
+
+            return meal; // Suitable meal found
+
+        } catch (error) {
+            console.error(`Attempt ${i+1}: Error fetching meal from ${sourceAPI || 'random'}:`, error);
+            // Wait a tiny bit before retrying on error? (Optional)
+            // await new Promise(resolve => setTimeout(resolve, 50));
+            continue; // Try again on error
+        }
+    }
+    // Fallback after many attempts
+    console.warn(`Could not find suitable meal for diet '${diet}' after ${MAX_ATTEMPTS} attempts, returning random.`);
+    return randMeal();
+}
+
+/** Wrapper function to ensure a fetched meal hasn't been used in the current plan generation. */
+async function unique(fetchFn) {
+    const MAX_UNIQUE_ATTEMPTS = 40;
+    for (let i = 0; i < MAX_UNIQUE_ATTEMPTS; i++) {
+        const m = await fetchFn();
+        // Check if meal is valid and not already used
+        if (m && m.idMeal && !used.has(m.idMeal)) {
+            used.add(m.idMeal); // Add to used set for this generation
+            return m;
+        }
+    }
+    console.warn("Could not find unique meal, returning potentially duplicate.");
+    return fetchFn(); // Return non-unique if necessary after many tries
+}
+
+/* ===== NUTRITION CALCULATION LOGIC ===== */
+
+/** Helper to safely return a zeroed macro object if input is invalid. */
+function safeNut(nutData) {
+    return {
+        cal: nutData?.calories || 0,
+        pro: nutData?.protein_g || 0,
+        car: nutData?.carbohydrates_total_g || 0,
+        fat: nutData?.fat_total_g || 0,
+    };
+}
+
+/** Fetches nutrition data for a single ingredient string using CalorieNinjas API, with caching. */
+async function ingNut(ing) {
+    const trimmedIng = ing.trim();
+    if (!trimmedIng) return null; // Skip empty ingredients
+    if (nutCache[trimmedIng]) return nutCache[trimmedIng]; // Return cached data if available
+    if (!USE_REAL) return null; // Don't call API if key isn't set
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
+
+        // Fetch from CalorieNinjas API
+        const response = await fetch('https://api.calorieninjas.com/v1/nutrition?query=' + encodeURIComponent(trimmedIng), {
+            headers: { 'X-Api-Key': API_KEY },
+            signal: controller.signal // Link fetch to abort controller
+        });
+        clearTimeout(timeoutId); // Clear timeout if fetch succeeded
+
+        if (!response.ok) {
+            // Log API errors (like 4xx client errors or 5xx server errors)
+            console.error(`CalorieNinja API error for "${trimmedIng}": ${response.status} ${response.statusText}`);
+            return null; // Indicate failure
+        }
+        const res = await response.json();
+
+        // Process response
+        if (res.items && res.items.length > 0) {
+            // Assuming the first item is the most relevant
+            nutCache[trimmedIng] = res.items[0];
+            // Update localStorage cache (consider debouncing if many calls happen quickly)
+            localStorage.setItem('nutCache', JSON.stringify(nutCache));
+            return nutCache[trimmedIng];
+        } else {
+            // Ingredient not found by API
+            // Optionally cache 'null' for this session to avoid retrying failed lookups
+            // nutCache[trimmedIng] = null;
+            console.warn(`No CalorieNinja nutrition data found for: "${trimmedIng}"`);
+            return null;
+        }
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            console.error(`CalorieNinja request timed out for "${trimmedIng}"`);
+        } else {
+            console.error(`Failed to fetch nutrition for "${trimmedIng}":`, error);
+        }
+        return null; // Return null on fetch/timeout errors
+    }
+}
+
+/** Calculates total estimated nutrition for a meal by summing its ingredients' nutrition. Uses caching. */
+async function mealNut(meal) {
+    // Basic validation and check meal-level cache
+    if (!meal || !meal.idMeal) return safeNut(null);
+    const mealCacheKey = `meal_${meal.idMeal}`;
+    if (nutCache[mealCacheKey]) {
+        return { ...safeNut(nutCache[mealCacheKey]) }; // Return a copy from cache
+    }
+    // If not using real API, return mock data
+    if (!USE_REAL) return mockMacros();
+
+    // Fetch nutrition for all ingredients concurrently
+    const ingredientPromises = [];
+    for (let i = 1; i <= 20; i++) { // TheMealDB has up to 20 ingredients/measures
+        const ing = meal['strIngredient' + i];
+        if (ing && ing.trim()) {
+            ingredientPromises.push(ingNut(ing)); // Add promise to array
+        }
+    }
+    const nutritionResults = await Promise.all(ingredientPromises); // Wait for all lookups
+
+    // Aggregate results, using safeNut to handle potential null returns from ingNut
+    let totalMacros = nutritionResults.reduce((acc, nutData) => {
+        return agg(acc, safeNut(nutData));
+    }, { cal: 0, pro: 0, car: 0, fat: 0 }); // Start aggregation with zeroed object
+
+    // Cache the calculated total macros for this meal ID
+    nutCache[mealCacheKey] = totalMacros;
+    localStorage.setItem('nutCache', JSON.stringify(nutCache)); // Update storage
+
+    return totalMacros;
+}
+
+/* ===== UI RENDERING FUNCTIONS ===== */
+
+/** Extracts ingredient and measure strings into a readable list for a meal. */
+function ingList(m) {
+    const arr = [];
+    if (!m) return arr; // Handle null meal object
+    for (let i = 1; i <= 20; i++) {
+        const ing = m['strIngredient' + i];
+        const mea = m['strMeasure' + i];
+        // Combine measure and ingredient if both exist and are not just whitespace
+        if (ing && ing.trim() && mea && mea.trim()) {
+            arr.push(`${mea.trim()} ${ing.trim()}`);
+        } else if (ing && ing.trim()) {
+            arr.push(ing.trim()); // Add ingredient even if measure is missing/empty
+        }
+    }
+    return arr;
+}
+
+/** Creates the HTML structure for a single meal tile. */
+function tile(meal, label, dayIndex, mealKey) {
+    const div = document.createElement('div');
+    div.className = 'meal';
+    // Add data attributes to identify the tile for swapping
+    div.dataset.d = dayIndex;
+    div.dataset.k = mealKey;
+
+    // Handle potentially missing meal data gracefully
+    const mealName = meal?.strMeal || 'Meal Unavailable';
+    const imgSrc = meal?.strMealThumb || 'https://placehold.co/300x200/eee/ccc?text=No+Image';
+    const linkHref = meal?.strSource || meal?.strYoutube || '#';
+    const linkTarget = linkHref !== '#' ? '_blank' : ''; // Open external links in new tab
+
+    div.innerHTML = `
+        <button class='swap' title='Swap Meal'>↻</button>
+        <img src='${imgSrc}' alt='${mealName}' loading="lazy">
+        <span>${label}</span>
+        <a target='${linkTarget}' rel="noopener noreferrer" href='${linkHref}'>
+            ${mealName}
+        </a>`;
+    return div;
+}
+
+/** Formats the macro summary string for display. */
+function macroText(m) {
+    const macros = m || {}; // Ensure m is an object
+    const cal = Math.round(macros.cal || 0);
+    const pro = Math.round(macros.pro || 0);
+    const car = Math.round(macros.car || 0);
+    const fat = Math.round(macros.fat || 0);
+    // Provide feedback if nutrition data couldn't be calculated (and we tried)
+    if (USE_REAL && cal === 0 && pro === 0 && car === 0 && fat === 0) {
+        return 'Daily: Nutrition data unavailable';
+    }
+    // Default display
+    return `Daily Est: ${cal} kcal &bull; P ${pro}g &bull; C ${car}g &bull; F ${fat}g`;
+}
+
+/** Renders the entire meal plan grid based on planData. */
+function render() {
+    plan.innerHTML = ''; // Clear previous plan content
+    planData.forEach((day, i) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `<h3>Day ${i + 1}</h3>`; // Day title
+
+        const wrap = document.createElement('div');
+        wrap.className = 'meals';
+        // Append meal tiles, using optional chaining for safety
+        wrap.appendChild(tile(day.meals?.breakfast, 'Breakfast', i, 'breakfast'));
+        wrap.appendChild(tile(day.meals?.lunch, 'Lunch', i, 'lunch'));
+        wrap.appendChild(tile(day.meals?.dinner, 'Dinner', i, 'dinner'));
+        card.appendChild(wrap);
+
+        // Append daily macro summary
+        const mac = document.createElement('div');
+        mac.className = 'macros';
+        mac.innerHTML = macroText(day.macros); // Use innerHTML to render bullet points correctly
+        card.appendChild(mac);
+
+        plan.appendChild(card); // Add the completed day card to the main plan area
+    });
+}
+
+/** Builds and displays the grouped grocery list. */
+function buildGrocery() {
+    const allIngredients = []; // Collect all ingredient strings first
+
+    // Iterate through plan data to extract ingredients
+    planData.forEach(d => {
+        // Safely access meals, checking if they exist
+        Object.values(d.meals || {}).forEach(m => {
+            if (m) { // Check if meal object exists
+                allIngredients.push(...ingList(m)); // Add ingredients from this meal
+            }
+        });
+    });
+
+    // Group the collected ingredients
+    const groups = { Produce: [], Dairy: [], Protein: [], Pantry: [], Other: [] };
+    // Use a Set to get unique ingredient strings before grouping
+    new Set(allIngredients).forEach(item => {
+        const groupName = groupIng(item);
+        groups[groupName].push(item); // Add unique item to its group
+    });
+
+    groceryList.innerHTML = ''; // Clear previous list content
+    let itemCount = 0;
+    // Populate the grocery list UL element
+    Object.entries(groups).forEach(([groupName, items]) => {
+        if (!items.length) return; // Skip empty groups
+        itemCount += items.length;
+        const groupLi = document.createElement('li');
+        // Create list items for each ingredient within the group
+        const itemsHtml = items.sort() // Sort items alphabetically within group
+                               .map(item => `<li>${item}</li>`)
+                               .join('');
+        groupLi.innerHTML = `<strong>${groupName}</strong><ul>${itemsHtml}</ul>`;
+        groceryList.appendChild(groupLi);
+    });
+
+    // Show the grocery section only if there are items to display
+    grocery.hidden = itemCount === 0;
+}
+
+/* ===== MEAL SWAP LOGIC ===== */
+// Event listener for clicks within the main plan area (delegated)
+plan.addEventListener('click', async e => {
+    const swapButton = e.target.closest('.swap');
+    // Ignore clicks not on a swap button or if button is disabled
+    if (!swapButton || swapButton.disabled) return;
+
+    const mealDiv = swapButton.closest('.meal');
+    const cardDiv = mealDiv.closest('.card');
+    const macrosDiv = cardDiv.querySelector('.macros'); // Div displaying daily macros
+
+    // Get data attributes identifying the meal's position
+    const d = parseInt(mealDiv.dataset.d); // Day index
+    const k = mealDiv.dataset.k; // Meal key ('breakfast', 'lunch', 'dinner')
+
+    // Disable button and show loading indicator
+    swapButton.disabled = true;
+    swapButton.innerHTML = '...';
+
+    try {
+        const diet = dietSel.value; // Get current diet selection
+
+        // Determine which function to call to fetch a replacement meal
+        const fetcher = k === 'breakfast' ? () => unique(mealBreakfast) : () => unique(() => mealDiet(diet));
+        const newMeal = await fetcher(); // Fetch the new meal
+
+        if (!newMeal) throw new Error("Failed to fetch a replacement meal.");
+
+        // --- Recalculate Daily Macros ---
+        // Get macros for the newly fetched meal (handles USE_REAL/mock internally)
+        const newMealMacros = await mealNut(newMeal);
+        planData[d].meals[k] = newMeal; // Update the meal in the planData state *first*
+
+        // Get macros for the *other two* meals of the day (potentially from cache)
+        const mealKeys = ['breakfast', 'lunch', 'dinner'];
+        const otherMealPromises = mealKeys
+            .filter(key => key !== k) // Exclude the meal being swapped
+            .map(key => mealNut(planData[d].meals[key])); // Fetch/get macros for others
+
+        const otherMacrosArray = await Promise.all(otherMealPromises);
+
+        // Aggregate all three meals for the new daily total
+        const newDailyMacros = agg(newMealMacros, otherMacrosArray.reduce(agg, { cal: 0, pro: 0, car: 0, fat: 0 }));
+        planData[d].macros = newDailyMacros; // Update the daily macros in planData
+
+        // --- Update UI ---
+        // Create the HTML for the new meal tile
+        const newTile = tile(newMeal, k.charAt(0).toUpperCase() + k.slice(1), d, k);
+        mealDiv.replaceWith(newTile); // Replace the old meal div with the new one
+        macrosDiv.innerHTML = macroText(newDailyMacros); // Update daily macro display
+
+        // Regenerate the grocery list based on the updated planData
+        buildGrocery();
+
+    } catch (error) {
+        console.error("Error during meal swap:", error);
+        // Indicate error on the button
+        swapButton.innerHTML = '⚠️';
+        swapButton.title = 'Swap failed. Try again?';
+        // Re-enable the button after a delay so the user can try again
+        setTimeout(() => {
+            // Check if the button still exists before trying to modify it
+            const currentButton = plan.querySelector(`[data-d='${d}'][data-k='${k}'] .swap`);
+            if (currentButton) {
+                 currentButton.disabled = false;
+                 currentButton.innerHTML = '↻';
+                 currentButton.title = 'Swap Meal';
+            }
+        }, 2000);
+    }
+    // Note: No finally block needed to re-enable, as the button is replaced on success,
+    // and the error handler re-enables the *original* button after a delay if it fails.
+});
+
+
+/* ===== GENERATE NEW MEAL PLAN ===== */
+async function generate(days = 7) {
+    // --- Setup & UI Update ---
+    genBtn.disabled = true;
+    genBtn.textContent = 'Generating...';
+    plan.innerHTML = '<div class="status-message">Generating plan, please wait...</div>';
+    grocery.hidden = true; // Hide old grocery list
+    groceryList.innerHTML = ''; // Clear old list content
+    used.clear(); // Reset the set of used meal IDs for this generation
+    planData = []; // Reset the main plan data array
+
+    // Clear previous error messages if any
+    document.querySelectorAll('.status-message.error').forEach(el => el.remove());
+
+    // --- Main Generation Loop ---
+    try {
+        for (let d = 0; d < days; d++) {
+            // Fetch all 3 meals for the day concurrently
+            const brPromise = unique(mealBreakfast);
+            const luPromise = unique(() => mealDiet(dietSel.value));
+            const diPromise = unique(() => mealDiet(dietSel.value));
+            const [br, lu, di] = await Promise.all([brPromise, luPromise, diPromise]);
+
+            // Basic check if any meal fetch failed critically
+            if (!br || !lu || !di) {
+                throw new Error(`Failed to fetch all required meals for Day ${d + 1}. Network issue or API limit?`);
+            }
+
+            // Calculate nutrition for the 3 fetched meals concurrently
+            const macroPromises = [mealNut(br), mealNut(lu), mealNut(di)];
+            const mealMacrosArray = await Promise.all(macroPromises);
+            // Aggregate the results into daily totals
+            const dailyMacros = mealMacrosArray.reduce(agg, { cal: 0, pro: 0, car: 0, fat: 0 });
+
+            // Add the day's data to the planData array
+            planData.push({ meals: { breakfast: br, lunch: lu, dinner: di }, macros: dailyMacros });
+        }
+
+        // --- Render Results ---
+        render(); // Render the meal plan cards to the DOM
+        buildGrocery(); // Build and display the grocery list
+
+    } catch (error) {
+        // --- Error Handling ---
+        console.error("Failed to generate meal plan:", error);
+        // Display user-friendly error message in the plan area
+        plan.innerHTML = `<div class="status-message error"><strong>Error:</strong> Failed to generate plan. ${error.message} Please check your connection or API key (if applicable) and try again.</div>`;
+    } finally {
+        // --- Cleanup ---
+        // Re-enable the generate button regardless of success or failure
+        genBtn.disabled = false;
+        genBtn.textContent = 'Generate Plan';
+    }
+}
+
+// --- Initial Setup & Event Listeners ---
+// Add event listener to the generate button
+genBtn.addEventListener('click', () => generate());
+
+// Optional: Generate a plan automatically when the page loads
+// window.addEventListener('load', () => generate()); // Uncomment to run on page load
+
+</script>
+</body>
+</html>
